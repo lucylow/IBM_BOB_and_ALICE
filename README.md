@@ -8,6 +8,8 @@
 
 **Turn idea into impact faster with A.L.I.C.E. — Clearly demonstrate how IBM Bob was used in the solution.**
 
+![](https://github.com/lucylow/IBM_BOB_and_ALICE/blob/main/Screenshot_17-5-2026_11128_www.canva.com.jpeg?raw=true)
+
 
 ## 📖 Table of Contents
 
