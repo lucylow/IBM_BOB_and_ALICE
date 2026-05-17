@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local secrets
+.env
+*.pem
+*.key
+
+# Streamlit and OS
+.streamlit/secrets.toml
+.DS_Store
+
+# Generated outputs
+*.zip
+reports/

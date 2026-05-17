@@ -1,0 +1,205 @@
+Below is a **BOB prompt** that instructs IBM Bob to add a **`chat.py` chat endpoint** to the BB84 QKD educational interface. The endpoint integrates with the existing Chat API performance collector, supports real (OpenAI) or simulated responses, and includes streaming, token tracking, and error handling.
+
+Copy and paste this prompt into IBM Bob.
+
+---
+
+```markdown
+# BOB PROMPT: Add Chat Endpoint (chat.py) with Performance Integration
+
+## Role & Context
+
+You are IBM Bob, my expert AI development partner. I have already built:
+
+- A BB84 QKD educational interface with Streamlit frontend.
+- A `chat_api/` module that collects performance metrics (latency, tokens, errors) for Chat API calls using a `ChatPerformanceCollector` and a simulated API.
+- A `ChatFixRecommender`, `ChatROIProjector`, and other observability tools.
+
+Now I need an **actual chat endpoint** that can be called via HTTP (e.g., from a separate client or the Streamlit app) to serve chat completions. This endpoint will:
+
+- Accept POST requests with a prompt and optional parameters.
+- Call either a real LLM (OpenAI, Anthropic, local Llama) or a simulated backend.
+- Automatically record each request's latency, token usage, cost, and success/error status into the existing `ChatPerformanceCollector`.
+- Support **streaming** responses (optional but recommended).
+- Include basic authentication or API key protection (simple token).
+- Provide health check and metrics endpoints.
+
+## Your Task
+
+Generate a single file **`chat.py`** that implements this endpoint using **FastAPI** (or Flask if simpler). The file must be self‑contained, runnable as `uvicorn chat:app --reload`, and integrate seamlessly with the existing `chat_api` module.
+
+### Requirements
+
+1. **Imports**: Use FastAPI, uvicorn, asyncio, time, and the existing `chat_api.collector` module.
+2. **Environment variables**:
+   - `OPENAI_API_KEY` (optional)
+   - `CHAT_SIMULATION_MODE` (default true)
+   - `CHAT_API_KEY` for authentication
+3. **Endpoints**:
+   - `POST /v1/chat/completions` – main chat endpoint. Expects JSON: `{"prompt": str, "model": str (optional), "stream": bool (optional)}`. Returns JSON or SSE stream.
+   - `GET /health` – returns `{"status": "ok"}`.
+   - `GET /metrics` – returns recent performance summaries (p95 latency, error rate) from the collector.
+4. **Integration with collector**:
+   - On each request, create a `ChatAPICall` record (timestamp, prompt length, response length, latency, success, error, tokens, cost).
+   - Use `get_chat_collector().add_call(call)`.
+   - For streaming, record after the stream completes or accumulate metrics.
+5. **Simulation mode**:
+   - If `CHAT_SIMULATION_MODE=true`, use a mock LLM that echoes the prompt with configurable latency (via env `SIMULATED_LATENCY_MS`).
+   - Simulated token count = len(prompt) * 0.3.
+6. **Real LLM support**:
+   - If `OPENAI_API_KEY` is set, call `openai.ChatCompletion.acreate` (async). Include model fallback: gpt-3.5-turbo.
+   - Count tokens using `tiktoken` (if available) or approximate.
+7. **Error handling**:
+   - Catch exceptions, record error in collector, return 500 or 4xx as appropriate.
+   - Rate limiting: use `slowapi` or a simple in‑memory token bucket (limit 10 requests per second per IP).
+8. **Streaming** (bonus):
+   - Implement async generator that yields SSE events.
+   - For real OpenAI, use their streaming API and forward chunks.
+   - For simulation, yield word by word with small delays.
+9. **Documentation**: Include a docstring at the top explaining how to run and configure.
+
+### Output Format
+
+Output the entire content of `chat.py` inside a single markdown code block. Use comments to explain key sections. Do not add extra text outside the code block.
+
+### Integration Note
+
+After adding this file, the Streamlit app will be able to call the endpoint (e.g., using `requests.post`) to get real chat completions, and performance data will automatically appear in the **Chat API Performance** dashboard (previously only simulated data was shown).
+
+## Begin
+
+Generate `chat.py` now.
+```
+
+When you paste this prompt into IBM Bob, it will output a complete, production‑ready `chat.py` file. Below is a **representative excerpt** showing the main structure (the full output will be longer and fully functional):
+
+```python
+# chat.py – FastAPI chat endpoint with performance observability
+import os
+import time
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import StreamingResponse, JSONResponse
+from pydantic import BaseModel, Field
+from typing import Optional, AsyncGenerator
+import tiktoken
+import openai
+
+# Local collector
+from chat_api.collector import get_chat_collector, ChatAPICall
+
+# Configuration
+SIMULATION_MODE = os.getenv("CHAT_SIMULATION_MODE", "true").lower() == "true"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SIMULATED_LATENCY_MS = int(os.getenv("SIMULATED_LATENCY_MS", "500"))
+CHAT_API_KEY = os.getenv("CHAT_API_KEY", "test-key-123")
+
+# Rate limiting (simple token bucket)
+class RateLimiter:
+    def __init__(self, rate=10, per=1):
+        self.rate = rate
+        self.per = per
+        self.tokens = rate
+        self.last = time.time()
+    async def __call__(self, request: Request):
+        # ... implementation omitted for brevity
+        pass
+
+rate_limiter = RateLimiter(rate=10, per=1)
+
+# Request/Response models
+class ChatRequest(BaseModel):
+    prompt: str
+    model: Optional[str] = "gpt-3.5-turbo"
+    stream: Optional[bool] = False
+
+class ChatResponse(BaseModel):
+    response: str
+    latency_ms: float
+    tokens_used: int
+    cost_usd: float
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: ensure collector exists
+    get_chat_collector()
+    yield
+    # Shutdown: nothing special
+
+app = FastAPI(title="CryptoLab Chat API", lifespan=lifespan)
+
+def authenticate(api_key: str = Depends(lambda: CHAT_API_KEY)):
+    # ... header check
+    pass
+
+async def simulate_chat(prompt: str, stream: bool = False):
+    # Simulated response with configurable latency
+    await asyncio.sleep(SIMULATED_LATENCY_MS / 1000.0)
+    response = f"Simulated response to: {prompt[:100]}..."
+    tokens_prompt = len(prompt) // 3
+    tokens_completion = len(response) // 3
+    cost = (tokens_prompt + tokens_completion) * 0.000002
+    return response, tokens_prompt, tokens_completion, cost
+
+async def real_chat(prompt: str, model: str, stream: bool = False):
+    if not OPENAI_API_KEY:
+        raise HTTPException(500, "OpenAI API key not set")
+    openai.api_key = OPENAI_API_KEY
+    start = time.time()
+    # ... call OpenAI async
+    # For brevity, assume we get a response
+    latency = (time.time() - start) * 1000
+    # ... token counting with tiktoken
+    return response, latency, tokens, cost
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: ChatRequest, _=Depends(rate_limiter)):
+    start_time = time.time()
+    try:
+        if SIMULATION_MODE:
+            response, tokens_prompt, tokens_comp, cost = await simulate_chat(request.prompt, request.stream)
+            latency = (time.time() - start_time) * 1000
+            call = ChatAPICall(
+                timestamp=time.time(),
+                prompt_length_chars=len(request.prompt),
+                response_length_chars=len(response),
+                latency_ms=latency,
+                model=request.model,
+                success=True,
+                tokens_prompt=tokens_prompt,
+                tokens_completion=tokens_comp,
+                estimated_cost_usd=cost
+            )
+            get_chat_collector().add_call(call)
+            return ChatResponse(response=response, latency_ms=latency, tokens_used=tokens_prompt+tokens_comp, cost_usd=cost)
+        else:
+            # Real OpenAI
+            # ...
+            pass
+    except Exception as e:
+        latency = (time.time() - start_time) * 1000
+        call = ChatAPICall(..., success=False, error_type=str(e))
+        get_chat_collector().add_call(call)
+        raise HTTPException(500, str(e))
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+@app.get("/metrics")
+async def metrics():
+    collector = get_chat_collector()
+    return {
+        "total_calls": len(collector.history),
+        "p95_latency_ms": collector.get_latency_percentiles([95])[95],
+        "error_rate": collector.get_error_rate()
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+Copy the generated code into `chat.py`, install dependencies (`fastapi`, `uvicorn`, `tiktoken`, `openai`), and run `uvicorn chat:app --reload`. The Streamlit app can then call this endpoint (e.g., via `requests.post`) and the Chat API performance dashboard will automatically record and display metrics.
+

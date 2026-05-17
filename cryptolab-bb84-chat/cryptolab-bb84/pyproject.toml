@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cryptolab-bb84"
+version = "0.1.0"
+description = "Interactive BB84 Quantum Key Distribution educational simulator for the IBM Bob Hackathon"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "CryptoLab Hackathon Team" }]
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "plotly>=5.18",
+  "streamlit>=1.31",
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+qiskit = ["qiskit>=1.0", "qiskit-aer>=0.13"]
+
+[project.scripts]
+cryptolab-bb84 = "cryptolab.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

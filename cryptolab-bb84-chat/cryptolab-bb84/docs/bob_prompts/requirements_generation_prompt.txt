@@ -1,0 +1,146 @@
+Below is a **BOB prompt** that asks IBM Bob to generate a comprehensive `requirements.in` file for the BB84 QKD educational interface project. The prompt requests a well-structured, commented file suitable for use with `pip-tools` (pip-compile). It includes core dependencies, optional GPU support, development tools, and detailed explanatory comments.
+
+Copy and paste this prompt into IBM Bob.
+
+---
+
+```markdown
+# BOB PROMPT: Generate requirements.in for BB84 QKD Educational Interface
+
+## Role & Context
+
+You are IBM Bob, my expert AI development partner. I am building **CryptoLab: BB84** – a Streamlit-based quantum key distribution educational interface. The project includes:
+
+- BB84 simulation using Qiskit (with Aer simulator)
+- Fast vectorised and density matrix simulators (NumPy)
+- Interactive visualisations (Plotly, Matplotlib)
+- Performance monitoring (psutil, scikit-learn for trend analysis)
+- Project Bob analytics (pandas, NumPy)
+- Optional GPU acceleration (cuQuantum)
+- Testing (pytest)
+
+I need a `requirements.in` file (pip-compile format) that lists all Python dependencies with version constraints. This file will be used with `pip-compile` to generate a locked `requirements.txt`.
+
+## Your Task
+
+Generate a **requirements.in** file that:
+
+1. Is **well-commented** – each section explains why the dependency is needed.
+2. Groups dependencies into logical sections:
+   - Core quantum simulation
+   - Frontend & visualisation
+   - Performance & monitoring
+   - Data analysis & ML
+   - Testing & development
+   - Optional GPU support
+3. Uses **version pins** where appropriate (e.g., `>=1.0.0,<2.0.0`) to ensure compatibility.
+4. Includes **platform-specific comments** for GPU acceleration (cuQuantum).
+5. Is ready to be saved as `requirements.in` in the project root.
+6. Provides **instructions** at the top on how to use `pip-compile` to generate `requirements.txt`.
+
+## Output Format
+
+Output only the content of `requirements.in` inside a markdown code block. Start with a header comment explaining usage. Do not add extra explanatory text outside the code block.
+
+## Example of expected style:
+
+```ini
+# ================================
+# REQUIREMENTS.IN for CryptoLab: BB84
+# ================================
+# Generate locked requirements.txt with:
+#   pip install pip-tools
+#   pip-compile requirements.in
+#   pip install -r requirements.txt
+```
+
+## Begin
+```
+
+After pasting this prompt, Bob will generate a `requirements.in` file like the one shown below (this is the expected output).
+
+---
+
+```ini
+# ============================================================================
+# REQUIREMENTS.IN – CryptoLab: BB84 (Quantum Key Distribution Educational Tool)
+# ============================================================================
+# Generate locked requirements.txt with:
+#   pip install pip-tools
+#   pip-compile requirements.in
+#   pip install -r requirements.txt
+#
+# For GPU acceleration (cuQuantum), uncomment the optional section.
+# ============================================================================
+
+# --------------------------------------------
+# Core Quantum Simulation
+# --------------------------------------------
+# Qiskit framework for quantum circuit simulation
+qiskit>=1.0.0,<2.0.0
+qiskit-aer>=0.14.0,<1.0.0
+
+# Fast NumPy-based density matrix simulation (fallback)
+numpy>=1.24.0,<2.0.0
+
+# --------------------------------------------
+# Frontend & Interactive Dashboard
+# --------------------------------------------
+# Streamlit for web UI
+streamlit>=1.28.0,<2.0.0
+
+# Plotly for interactive gauges and heatmaps
+plotly>=5.17.0,<6.0.0
+
+# Matplotlib for Bloch spheres and static plots
+matplotlib>=3.7.0,<4.0.0
+
+# --------------------------------------------
+# Performance & System Monitoring
+# --------------------------------------------
+# psutil for CPU, memory, network metrics
+psutil>=5.9.0,<6.0.0
+
+# scikit-learn for trend fitting and anomaly detection
+scikit-learn>=1.2.0,<2.0.0
+
+# --------------------------------------------
+# Data Analysis & Utilities
+# --------------------------------------------
+# Pandas for dataframes in dashboards
+pandas>=2.0.0,<3.0.0
+
+# --------------------------------------------
+# Testing & Development
+# --------------------------------------------
+# Pytest for unit tests
+pytest>=7.4.0,<8.0.0
+
+# Optional: for generating mock data (already covered by numpy)
+
+# --------------------------------------------
+# Optional GPU Acceleration (cuQuantum)
+# Uncomment if you have an NVIDIA GPU and CUDA 11.x
+# --------------------------------------------
+# cuquantum-cu11>=22.10.0   # for CUDA 11
+# cuquantum-python-cu11>=22.10.0
+
+# --------------------------------------------
+# Additional Tools (used in some modules)
+# --------------------------------------------
+# Requests for optional API calls (e.g., real hardware backend)
+requests>=2.31.0,<3.0.0
+
+# ------------------------------------------------------------
+# End of requirements.in
+# ------------------------------------------------------------
+```
+
+Copy the generated output into a file named `requirements.in` in your project root. Then run:
+
+```bash
+pip install pip-tools
+pip-compile requirements.in
+pip install -r requirements.txt
+```
+

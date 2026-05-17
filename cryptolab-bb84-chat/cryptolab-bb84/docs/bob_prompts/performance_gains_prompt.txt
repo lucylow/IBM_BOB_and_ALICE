@@ -1,0 +1,173 @@
+Below is a **BOB prompt** that instructs IBM Bob to add a **Performance Gains** module to the BB84 QKD educational interface. The module will measure, compare, and visualize speedups from different simulation methods (vectorised, density matrix, caching, GPU), generate benchmark reports, and integrate into the Streamlit dashboard.
+
+Copy and paste this prompt into IBM Bob.
+
+---
+
+```markdown
+# BOB PROMPT: Add Performance Gains Measurement & Visualization
+
+## Role & Context
+
+You are IBM Bob, my expert AI development partner. I have built **CryptoLab: BB84** – a full‑stack quantum key distribution educational tool. The project already includes multiple simulation backends:
+
+- `qkd.bb84_core` – per‑qubit Qiskit circuit simulation
+- `fast.bb84_vectorised` – NumPy vectorised simulation
+- `qkd.bb84_density` – density matrix simulation
+- Caching via `functools.lru_cache`
+- Optional GPU acceleration (cuQuantum stub)
+
+I need a new module called **`performance_gains/`** that systematically **measures, compares, and visualizes performance gains** between these methods. This will help users (and judges) see the speedups achieved by optimizations.
+
+## Your Task
+
+Generate a complete set of files for the `performance_gains/` directory. Each file must be ready to copy‑paste into the project.
+
+### Required Files
+
+1. **`performance_gains/benchmark.py`** – Functions to run benchmarks across different qubit counts and methods. Outputs a Pandas DataFrame of latencies.
+2. **`performance_gains/comparator.py`** – Compare two simulation methods and compute speedup ratios, confidence intervals, and statistical significance.
+3. **`performance_gains/gains_dashboard.py`** – Streamlit UI to display performance gains as interactive charts (bar charts, line plots, speedup heatmaps).
+4. **`performance_gains/report_generator.py`** – Generate a downloadable HTML/Markdown report of benchmark results.
+5. **`performance_gains/cache_impact.py`** – Measure and visualize the impact of caching on repeated simulation runs.
+6. **`performance_gains/gpu_projection.py`** – Estimate potential GPU speedup using scaling laws (since real GPU may not be available).
+
+### Requirements for Each File
+
+- **`benchmark.py`**:
+  - Define `run_benchmark(qubit_range, methods, repeats=5)` that returns a DataFrame with columns: `qubits`, `method`, `latency_ms`, `repetition`.
+  - Use `time.perf_counter()` for high‑precision timing.
+  - Include a progress bar (using `tqdm` or `st.progress` when called from UI).
+  - Store results in a cache file (JSON/CSV) to avoid recomputation.
+
+- **`comparator.py`**:
+  - `compare_methods(df, method_a, method_b)` – returns speedup ratio (median of pairwise ratios) and 95% confidence interval.
+  - `significance_test(df, method_a, method_b)` – returns p‑value (Mann‑Whitney U test).
+  - Generate a human‑readable summary string.
+
+- **`gains_dashboard.py`**:
+  - Create a Streamlit tab or expander that:
+    - Allows user to select qubit range (e.g., 50–500) and methods.
+    - Click “Run Benchmark” (with caching).
+    - Display speedup charts: line chart of latency vs qubits per method, bar chart of speedup relative to baseline (e.g., vectorised).
+    - Show statistical significance.
+    - Include a “Caching Impact” sub‑section.
+
+- **`cache_impact.py`**:
+  - `measure_cache_benefit(n_qubits, method, n_runs=10, clear_cache_between=False)` – measures latency with and without caching.
+  - Returns speedup factor and a chart comparing cold vs warm runs.
+
+- **`gpu_projection.py`**:
+  - `project_gpu_speedup(n_qubits)` – returns estimated speedup based on empirical scaling (e.g., 20x for 500 qubits, 5x for 100 qubits).
+  - Display a projected latency line on the benchmark chart as a dashed line.
+
+### Integration into the Main App
+
+- Add a new tab in `app.py` called **“⚡ Performance Gains”**.
+- Inside that tab, call `gains_dashboard.render_gains_dashboard()`.
+- Ensure that existing simulation functions are imported correctly (handle relative imports).
+
+### Output Format
+
+Output **each file** as a markdown code block with the filename as a level‑2 heading. Use the following structure:
+
+```markdown
+## performance_gains/benchmark.py
+```python
+# code here
+```
+
+## performance_gains/comparator.py
+```python
+...
+```
+
+...
+```
+
+Do not add extra commentary outside the code blocks. Include comments and docstrings.
+
+### Dependencies
+
+Add the following to `requirements.in` if not already present:
+- `scipy` for statistical tests
+- `tqdm` for progress bars
+
+### Example of Expected Output (partial)
+
+The code should produce visualizations like:
+- Latency vs qubits (log‑log scale) for vectorised vs density matrix.
+- Speedup factor as a bar chart: density matrix is 3x faster at 500 qubits.
+- Caching reduces repeated run latency by 90%.
+
+## Begin
+
+Generate the complete `performance_gains/` module now.
+```
+
+---
+
+When you paste this prompt into IBM Bob, it will output the full code for the performance gains module. Below is a **representative excerpt** showing the style and key functions (the actual output will be much longer and complete).
+
+---
+
+```python
+## performance_gains/benchmark.py
+"""Benchmark simulation methods across qubit counts."""
+import time
+import pandas as pd
+from tqdm import tqdm
+import streamlit as st
+from fast.bb84_vectorised import run_bb84_vectorised
+from qkd.bb84_density import run_bb84_density
+from qkd.bb84_core import run_bb84
+
+def run_benchmark(qubit_range, methods, repeats=3, use_caching=False):
+    """
+    Run benchmarks for given methods and qubit counts.
+    Returns DataFrame with columns: qubits, method, latency_ms, repetition.
+    """
+    results = []
+    total = len(qubit_range) * len(methods) * repeats
+    progress = tqdm(total=total, desc="Benchmarking")
+    
+    for qubits in qubit_range:
+        for method in methods:
+            for rep in range(repeats):
+                if method == "vectorised":
+                    func = run_bb84_vectorised
+                elif method == "density":
+                    func = run_bb84_density
+                else:
+                    func = run_bb84
+                start = time.perf_counter()
+                func(qubits, 0.0, "none")
+                end = time.perf_counter()
+                latency_ms = (end - start) * 1000
+                results.append({
+                    "qubits": qubits,
+                    "method": method,
+                    "repetition": rep,
+                    "latency_ms": latency_ms
+                })
+                progress.update(1)
+    progress.close()
+    df = pd.DataFrame(results)
+    # Aggregate by median
+    summary = df.groupby(["qubits", "method"])["latency_ms"].agg(["median", "std"]).reset_index()
+    summary.columns = ["qubits", "method", "median_latency_ms", "std_latency_ms"]
+    return df, summary
+
+# Add a cached version to avoid repeated benchmarks
+_benchmark_cache = {}
+def get_benchmark(qubit_range, methods, repeats=3, force_refresh=False):
+    key = (tuple(qubit_range), tuple(methods), repeats)
+    if force_refresh or key not in _benchmark_cache:
+        _benchmark_cache[key] = run_benchmark(qubit_range, methods, repeats)
+    return _benchmark_cache[key]
+```
+
+---
+
+The full output will include all files: `comparator.py`, `gains_dashboard.py`, `report_generator.py`, `cache_impact.py`, `gpu_projection.py`, and integration instructions. Use the generated code to add a powerful **Performance Gains** tab to your BB84 educational interface.
+
